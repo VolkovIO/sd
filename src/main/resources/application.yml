@@ -1,1 +1,27 @@
-spring.application.name=sd
+spring:
+  main:
+    allow-bean-definition-overriding: true
+    banner-mode: "off"
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sd
+    username: postgres
+    password: postgres
+    hikari:
+      schema: public
+      maximum-pool-size: 10
+      minimum-idle: 1
+      idle-timeout: 3600000  # 1 hour for not active connection
+      max-lifetime: 7200000  # max time for active connection
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    database: postgresql
+    properties:
+      hibernate:
+        default_schema: public
+        jdbc:
+          batch_size: 20
+          batch_versioned_data: true
+          order_inserts: true
+          order_updates: true
