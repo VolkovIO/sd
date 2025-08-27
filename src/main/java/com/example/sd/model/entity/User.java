@@ -1,13 +1,9 @@
 package com.example.sd.model.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
-import org.hibernate.validator.constraints.UniqueElements;
 
 import java.time.Instant;
 
@@ -17,6 +13,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "users") // Меняем на "users" USER — это зарезервированное ключевое слово в SQL
 public class User {
 
     @Id
@@ -24,7 +21,6 @@ public class User {
     private Long id;
 
     @NotBlank
-    @UniqueElements
     private String username;
 
     @NotBlank
