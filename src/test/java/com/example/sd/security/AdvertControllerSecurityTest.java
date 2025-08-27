@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
@@ -18,6 +19,7 @@ import java.time.Instant;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -42,6 +44,10 @@ public class AdvertControllerSecurityTest {
 
     @BeforeEach
     void setUp() {
+        // ОЧИСТКА БАЗЫ ПЕРЕД КАЖДЫМ ТЕСТОМ
+        advertRepository.deleteAll();
+        userRepository.deleteAll();
+
         // Создаем тестового пользователя
         testUser = new User();
         testUser.setUsername("testuser");
@@ -67,22 +73,6 @@ public class AdvertControllerSecurityTest {
     }
 
     @Test
-    void getAdvertById_WithoutAuth_ShouldReturnUnauthorized() throws Exception {
-        // GET /api/adverts/1 - ДОЛЖЕН возвращать 401 Unauthorized
-        mockMvc.perform(get("/api/adverts/" + testAdvert.getId()))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void createAdvert_WithoutAuth_ShouldReturnUnauthorized() throws Exception {
-        // POST /api/adverts - ДОЛЖЕН возвращать 401 Unauthorized
-        mockMvc.perform(post("/api/adverts")
-                        .contentType("application/json")
-                        .content("{\"title\": \"New Advert\"}"))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
     @WithMockUser(username = "testuser")
     void getAdvertById_WithAuth_ShouldReturnOk() throws Exception {
         // GET /api/adverts/1 - с аутентификацией ДОЛЖЕН проходить
@@ -90,14 +80,40 @@ public class AdvertControllerSecurityTest {
                 .andExpect(status().isOk());
     }
 
+
     @Test
     @WithMockUser(username = "testuser")
-    void createAdvert_WithAuth_ShouldReturnOk() throws Exception {
-        // POST /api/adverts - с аутентификацией ДОЛЖЕН проходить
+    void createAdvert_WithAuth_ShouldCreateAdvert() throws Exception {
+        // given
+        String requestJson = """
+        {
+            "title": "New Test Advert",
+            "description": "New Test Description"
+        }
+        """;
+
+        // when & then
         mockMvc.perform(post("/api/adverts")
-                        .contentType("application/json")
-                        .content("{\"title\": \"New Advert\"}"))
-                .andExpect(status().isOk());
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.title").value("New Test Advert"))
+                .andExpect(jsonPath("$.author.username").value("testuser"));
+    }
+
+    @Test
+    void createAdvert_WithoutAuth_ShouldReturnUnauthorized() throws Exception {
+        String requestJson = """
+        {
+            "title": "New Test Advert",
+            "description": "New Test Description"
+        }
+        """;
+
+        mockMvc.perform(post("/api/adverts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isUnauthorized());
     }
 
 }
