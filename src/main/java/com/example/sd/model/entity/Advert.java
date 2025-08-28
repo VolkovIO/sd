@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.List;
 
 @Entity
 @Getter
@@ -28,4 +29,7 @@ public class Advert {
     private User author;
 
     private Instant createdAt;
+
+    @OneToMany(mappedBy = "advert", cascade = CascadeType.ALL)
+    private List<Chat> chats;
 }

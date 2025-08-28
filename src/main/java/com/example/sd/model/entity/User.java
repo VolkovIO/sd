@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.List;
 
 @Entity
 @Getter
@@ -31,4 +32,13 @@ public class User {
     private String passwordHash;
 
     private Instant createdAt;
+
+    @OneToMany(mappedBy = "initiator", cascade = CascadeType.ALL)
+    private List<Chat> initiatedChats;
+
+    @OneToMany(mappedBy = "recipient", cascade = CascadeType.ALL)
+    private List<Chat> receivedChats;
+
+    @OneToMany(mappedBy = "sender", cascade = CascadeType.ALL)
+    private List<Message> sentMessages;
 }
