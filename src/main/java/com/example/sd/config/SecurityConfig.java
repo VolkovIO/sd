@@ -19,13 +19,19 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers(HttpMethod.GET, "/api/adverts", "/api/adverts/**").permitAll() // Все GET публичные
-                        .requestMatchers(HttpMethod.POST, "/api/adverts").authenticated() // POST требует аутентификации
-                        .requestMatchers("/api/adverts/**").authenticated() // Все остальные методы требуют аутентификации
+                        // Публичные эндпоинты
+                        .requestMatchers(HttpMethod.GET, "/api/adverts", "/api/adverts/**").permitAll()
+
+                        // Защищенные эндпоинты чатов
+                        .requestMatchers(HttpMethod.GET, "/api/chats/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/chats/**").authenticated()
+
+                        // Защищенные эндпоинты объявлений
+                        .requestMatchers(HttpMethod.POST, "/api/adverts").authenticated()
+
                         .anyRequest().permitAll()
                 )
-                .httpBasic(httpBasic -> {
-                })
+                .httpBasic(httpBasic -> {})
                 .csrf(csrf -> csrf.disable());
 
         return http.build();
