@@ -1,7 +1,7 @@
 package com.example.sd.repository;
 
-import com.example.sd.model.entity.Chat;
-import com.example.sd.model.entity.User;
+import com.example.sd.entity.Chat;
+import com.example.sd.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

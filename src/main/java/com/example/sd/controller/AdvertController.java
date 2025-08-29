@@ -1,8 +1,8 @@
 package com.example.sd.controller;
 
 import com.example.sd.dto.CreateAdvertRequest;
-import com.example.sd.model.entity.Advert;
-import com.example.sd.model.entity.User;
+import com.example.sd.entity.Advert;
+import com.example.sd.entity.User;
 import com.example.sd.repository.AdvertRepository;
 import com.example.sd.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

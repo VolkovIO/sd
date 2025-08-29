@@ -1,7 +1,7 @@
 package com.example.sd.security;
 
-import com.example.sd.model.entity.Advert;
-import com.example.sd.model.entity.User;
+import com.example.sd.entity.Advert;
+import com.example.sd.entity.User;
 import com.example.sd.repository.AdvertRepository;
 import com.example.sd.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;

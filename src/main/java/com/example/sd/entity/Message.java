@@ -1,4 +1,4 @@
-package com.example.sd.model.entity;
+package com.example.sd.entity;
 
 import jakarta.persistence.*;
 import lombok.*;

@@ -1,7 +1,7 @@
 package com.example.sd.repository;
 
-import com.example.sd.model.entity.Advert;
-import com.example.sd.model.entity.User;
+import com.example.sd.entity.Advert;
+import com.example.sd.entity.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
