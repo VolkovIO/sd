@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Доска объявлений</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { background: #2c3e50; color: white; padding: 1rem; margin-bottom: 2rem; }
+        .adverts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .advert-card { border: 1px solid #ddd; padding: 1rem; border-radius: 5px; }
+        .advert-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 0.5rem; }
+        .advert-author { color: #666; font-size: 0.9rem; }
+        .btn { background: #3498db; color: white; padding: 0.5rem 1rem; border: none; border-radius: 3px; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>Доска объявлений</h1>
+    </header>
+
+    <nav style="margin-bottom: 1rem;">
+        <a href="/index.html" class="btn">Объявления</a>
+        <a href="/chat-list.html" class="btn">Мои чаты</a>
+    </nav>
+
+    <div id="auth-section">
+        <input type="text" id="username" placeholder="Username" value="testuser1">
+        <input type="password" id="password" placeholder="Password" value="password123">
+        <button onclick="loadAdverts()">Загрузить объявления</button>
+    </div>
+
+    <h2>Все объявления</h2>
+    <div id="adverts-container" class="adverts-grid">
+        <!-- Объявления будут загружены через JavaScript -->
+    </div>
+</div>
+
+<script>
+    async function loadAdverts() {
+        try {
+            const response = await fetch('/api/adverts');
+            const adverts = await response.json();
+
+            const container = document.getElementById('adverts-container');
+            container.innerHTML = '';
+
+            adverts.forEach(advert => {
+                const card = document.createElement('div');
+                card.className = 'advert-card';
+                card.innerHTML = `
+                    <div class="advert-title">${advert.title}</div>
+                    <div class="advert-description">${advert.description}</div>
+                    <div class="advert-author">Автор: ${advert.author.username}</div>
+                    <a href="/chat.html?advertId=${advert.id}&recipientId=${advert.author.id}" class="btn">
+                        Написать сообщение
+                    </a>
+                `;
+                container.appendChild(card);
+            });
+
+        } catch (error) {
+            console.error('Ошибка загрузки объявлений:', error);
+        }
+    }
+
+    // Загружаем объявления при загрузке страницы
+    window.onload = loadAdverts;
+</script>
+</body>
+</html>

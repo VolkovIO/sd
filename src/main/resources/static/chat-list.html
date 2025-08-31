@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Мои чаты</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    header { background: #2c3e50; color: white; padding: 1rem; margin-bottom: 2rem; }
+    nav { margin-bottom: 1rem; }
+    .btn { background: #3498db; color: white; padding: 0.5rem 1rem; border: none; border-radius: 3px; cursor: pointer; text-decoration: none; display: inline-block; margin-right: 10px; }
+    .btn:hover { background: #2980b9; }
+    .chat-list { display: grid; gap: 15px; }
+    .chat-item { border: 1px solid #ddd; padding: 1rem; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+    .chat-info { flex: 1; }
+    .chat-title { font-weight: bold; margin-bottom: 0.5rem; }
+    .chat-participants { color: #666; font-size: 0.9rem; }
+    .last-message { color: #888; font-style: italic; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Мои чаты</h1>
+  </header>
+
+  <nav>
+    <a href="/index.html" class="btn">Объявления</a>
+    <a href="/chat-list.html" class="btn">Мои чаты</a>
+  </nav>
+
+  <div id="auth-section">
+    <input type="text" id="username" placeholder="Username" value="testuser1">
+    <input type="password" id="password" placeholder="Password" value="password123">
+    <button onclick="loadChats()" class="btn">Загрузить мои чаты</button>
+  </div>
+
+  <h2>Список чатов</h2>
+  <div id="chats-container" class="chat-list">
+    <!-- Чаты будут загружены через JavaScript -->
+  </div>
+</div>
+
+<script>
+  async function loadChats() {
+      try {
+          const username = document.getElementById('username').value;
+          const password = document.getElementById('password').value;
+
+          const response = await fetch('/api/chats/my', {
+              headers: {
+                  'Authorization': 'Basic ' + btoa(username + ':' + password)
+              }
+          });
+
+          const chats = await response.json();
+          displayChats(chats);
+
+      } catch (error) {
+          console.error('Ошибка загрузки чатов:', error);
+          alert('Ошибка загрузки чатов. Проверьте логин/пароль.');
+      }
+  }
+
+  function displayChats(chats) {
+      const container = document.getElementById('chats-container');
+      container.innerHTML = '';
+
+      if (chats.length === 0) {
+          container.innerHTML = '<p>У вас пока нет чатов</p>';
+          return;
+      }
+
+      chats.forEach(chat => {
+          const chatItem = document.createElement('div');
+          chatItem.className = 'chat-item';
+
+          // Определяем собеседника
+          const currentUser = document.getElementById('username').value;
+          const otherUser = chat.initiator.username === currentUser ?
+              chat.recipient : chat.initiator;
+
+          chatItem.innerHTML = `
+              <div class="chat-info">
+                  <div class="chat-title">Чат по объявлению: ${chat.advert.title}</div>
+                  <div class="chat-participants">
+                      Собеседник: ${otherUser.username}
+                  </div>
+                  <div class="last-message">ID чата: ${chat.id}</div>
+              </div>
+              <a href="/chat.html?chatId=${chat.id}" class="btn">
+                  Перейти к чату
+              </a>
+          `;
+
+          container.appendChild(chatItem);
+      });
+  }
+
+  // Можно автоматически загружать чаты при загрузке страницы
+  // window.onload = loadChats;
+</script>
+</body>
+</html>

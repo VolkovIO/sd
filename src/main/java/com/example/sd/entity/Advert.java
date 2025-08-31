@@ -1,5 +1,6 @@
 package com.example.sd.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
@@ -31,5 +32,6 @@ public class Advert {
     private Instant createdAt;
 
     @OneToMany(mappedBy = "advert", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Chat> chats;
 }
