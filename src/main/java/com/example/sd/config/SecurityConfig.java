@@ -30,7 +30,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/adverts").authenticated()
 
                         // Разрешаем WebSocket endpoint
-                        .requestMatchers("/ws/**").permitAll() // или authenticated()
+                        .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/js/**", "/css/**").permitAll()
 
                         .anyRequest().permitAll()
                 )

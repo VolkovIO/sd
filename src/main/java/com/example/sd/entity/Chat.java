@@ -1,5 +1,6 @@
 package com.example.sd.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,6 +27,7 @@ public class Chat {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "advert_id", nullable = false)
+    @JsonIgnore
     private Advert advert;
 
     @ManyToOne(fetch = FetchType.LAZY)

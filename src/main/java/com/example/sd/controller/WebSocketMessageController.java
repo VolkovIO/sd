@@ -1,5 +1,6 @@
 package com.example.sd.controller;
 
+import com.example.sd.dto.MessageDTO;
 import com.example.sd.entity.Message;
 import com.example.sd.entity.User;
 import com.example.sd.repository.UserRepository;
@@ -24,13 +25,15 @@ public class WebSocketMessageController {
 
     @MessageMapping("/chat/{chatId}/send")
     @SendTo("/topic/chat.{chatId}")
-    public Message sendMessage(@DestinationVariable Long chatId,
-                               Message message,
-                               Principal principal) {
+    public MessageDTO sendMessage(@DestinationVariable Long chatId,
+                                  Message message,
+                                  Principal principal) {
 
         try {
             User sender = userRepository.findByUsername(principal.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
+
+//            User sender = (User) ((Authentication) principal).getPrincipal();
 
             log.info("Received message for chat {} from user {}: {}", chatId, principal.getName(), message.getText());
 
@@ -38,7 +41,7 @@ public class WebSocketMessageController {
             Message savedMessage = messageService.sendMessage(chatId, sender, message.getText());
 
             // Возвращаем сохраненное сообщение для рассылки подписчикам
-            return savedMessage;
+            return messageService.convertToDTO(savedMessage);
 
         } catch (Exception e) {
             log.error("Error processing WebSocket message", e);

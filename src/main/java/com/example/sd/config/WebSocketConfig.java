@@ -1,6 +1,7 @@
 package com.example.sd.config;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -22,9 +23,11 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @Configuration
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
+@Slf4j
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final UserDetailsService userDetailsService;
+    private final TopicSubscriptionInterceptor topicSubscriptionInterceptor;
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
@@ -36,27 +39,34 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
                     // Аутентифицируем пользователя при подключении
                     String username = accessor.getFirstNativeHeader("username");
-                    String password = accessor.getFirstNativeHeader("password");
 
-                    if (username != null && password != null) {
+                    if (username != null) {
                         try {
                             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                            // Здесь должна быть проверка пароля!
-                            // Для простоты пока пропускаем проверку пароля
                             Authentication authentication = new UsernamePasswordAuthenticationToken(
                                     userDetails, null, userDetails.getAuthorities());
+
                             SecurityContextHolder.getContext().setAuthentication(authentication);
                             accessor.setUser(authentication);
 
+                            log.info("WebSocket user authenticated: {}", username);
+
                         } catch (Exception e) {
-                            // Обработка ошибки аутентификации
-                            return null; // Отклоняем сообщение
+                            log.error("WebSocket authentication failed for user: {}", username, e);
+                            return null; // Отклоняем подключение
                         }
+                    } else {
+                        log.warn("WebSocket connection attempt without username");
+                        return null; // Отклоняем подключение без username
                     }
                 }
                 return message;
             }
         });
+        registration.interceptors(
+                new AuthenticationChannelInterceptor(userDetailsService),
+                topicSubscriptionInterceptor
+        );
     }
 
     @Override
@@ -77,5 +87,33 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*") // Разрешаем все origins (для разработки)
                 .withSockJS(); // Включаем поддержку SockJS для fallback
+    }
+
+    // Выносим аутентификацию в отдельный класс
+    @RequiredArgsConstructor
+    private static class AuthenticationChannelInterceptor implements ChannelInterceptor {
+
+        private final UserDetailsService userDetailsService;
+
+        @Override
+        public Message<?> preSend(Message<?> message, MessageChannel channel) {
+            StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+
+            if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
+                String username = accessor.getFirstNativeHeader("username");
+                if (username != null) {
+                    try {
+                        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities());
+                        accessor.setUser(authentication);
+                    } catch (Exception e) {
+                        log.error("Authentication failed", e);
+                        return null;
+                    }
+                }
+            }
+            return message;
+        }
     }
 }

@@ -1,5 +1,6 @@
 package com.example.sd.service;
 
+import com.example.sd.dto.MessageDTO;
 import com.example.sd.entity.Chat;
 import com.example.sd.entity.Message;
 import com.example.sd.entity.User;
@@ -54,5 +55,23 @@ public class MessageService {
     private boolean isChatParticipant(Chat chat, User user) {
         return chat.getInitiator().getId().equals(user.getId()) ||
                 chat.getRecipient().getId().equals(user.getId());
+    }
+
+    public MessageDTO convertToDTO(Message message) {
+        MessageDTO dto = new MessageDTO();
+        dto.setId(message.getId());
+        dto.setText(message.getText());
+        dto.setTimestamp(message.getTimestamp());
+
+        MessageDTO.UserDTO userDTO = new MessageDTO.UserDTO();
+        userDTO.setId(message.getSender().getId());
+        userDTO.setUsername(message.getSender().getUsername());
+        dto.setSender(userDTO);
+
+        MessageDTO.ChatDTO chatDTO = new MessageDTO.ChatDTO();
+        chatDTO.setId(message.getChat().getId());
+        dto.setChat(chatDTO);
+
+        return dto;
     }
 }
