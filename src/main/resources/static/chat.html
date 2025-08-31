@@ -23,13 +23,14 @@
     .connection-status { padding: 0.5rem; margin-bottom: 1rem; border-radius: 3px; }
     .connected { background: #d4edda; color: #155724; }
     .disconnected { background: #f8d7da; color: #721c24; }
+    .connecting { background: #fff3cd; color: #856404; }
   </style>
 </head>
 <body>
 <div class="container">
   <header>
     <h1>Чат по объявлению</h1>
-    <div id="chat-info"></div>
+    <div id="chat-info">Загрузка информации о чате...</div>
   </header>
 
   <nav style="margin-bottom: 1rem;">
@@ -40,8 +41,8 @@
   <div id="auth-section">
     <input type="text" id="username" placeholder="Username" value="testuser1">
     <input type="password" id="password" placeholder="Password" value="password123">
-    <button onclick="connect()">Подключиться к чату</button>
-    <button onclick="disconnect()">Отключиться</button>
+    <button onclick="connect()" class="btn">Подключиться к чату</button>
+    <button onclick="disconnect()" class="btn">Отключиться</button>
   </div>
 
   <div id="connection-status" class="connection-status disconnected">Не подключено</div>
@@ -55,79 +56,146 @@
     <button id="send-button" onclick="sendMessage()" disabled>Отправить</button>
   </div>
 
-  <div>
+  <div style="margin-top: 1rem;">
     <a href="/index.html" class="btn">← Назад к объявлениям</a>
   </div>
 </div>
 
 <script>
-  const urlParams = new URLSearchParams(window.location.search);
-  const advertId = urlParams.get('advertId');
-  const recipientId = urlParams.get('recipientId');
-
+  // Упрощенная версия - давай начнем с basics
   let stompClient = null;
   let currentChatId = null;
 
-  document.getElementById('chat-info').textContent =
-      `Объявление ID: ${advertId}, Получатель ID: ${recipientId}`;
+  // Проверяем что все элементы существуют перед работой с ними
+  function ensureElements() {
+      const requiredElements = [
+          'chat-info', 'username', 'password', 'connection-status',
+          'chat-container', 'message-input', 'send-button'
+      ];
+
+      requiredElements.forEach(id => {
+          if (!document.getElementById(id)) {
+              console.error('Element not found:', id);
+          }
+      });
+  }
+
+  function updateChatInfo() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const advertId = urlParams.get('advertId');
+      const recipientId = urlParams.get('recipientId');
+
+      const chatInfo = document.getElementById('chat-info');
+      if (chatInfo) {
+          chatInfo.textContent = `Объявление ID: ${advertId}, Получатель ID: ${recipientId}`;
+      }
+  }
+
+  function updateConnectionStatus(status, message) {
+      const statusDiv = document.getElementById('connection-status');
+      if (statusDiv) {
+          statusDiv.textContent = message;
+          statusDiv.className = `connection-status ${status}`;
+      }
+  }
 
   async function connect() {
       const username = document.getElementById('username').value;
       const password = document.getElementById('password').value;
 
-      try {
-          // Сначала создаем/получаем чат
-          const chatResponse = await fetch('/api/chats', {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': 'Basic ' + btoa(username + ':' + password)
-              },
-              body: JSON.stringify({
-                  advertId: parseInt(advertId),
-                  recipientId: parseInt(recipientId)
-              })
-          });
+      if (!username || !password) {
+          alert('Введите username и password');
+          return;
+      }
 
-          const chat = await chatResponse.json();
+      updateConnectionStatus('connecting', 'Подключаемся...');
+
+      try {
+          // 1. Создаем/получаем чат
+          const chat = await createOrGetChat(username, password);
           currentChatId = chat.id;
 
-          // Подключаемся к WebSocket
-          const socket = new SockJS('http://localhost:8080/ws');
-          stompClient = Stomp.over(socket);
-
-          stompClient.connect({
-              'username': username
-          }, function(frame) {
-              updateConnectionStatus('connected', 'Подключено к чату');
-
-              // Подписываемся на топик чата
-              stompClient.subscribe('/topic/chat.' + currentChatId, function(message) {
-                  const messageData = JSON.parse(message.body);
-                  displayMessage(messageData);
-              });
-
-              // Загружаем историю сообщений
-              loadMessageHistory();
-
-              // Активируем поле ввода
-              document.getElementById('message-input').disabled = false;
-              document.getElementById('send-button').disabled = false;
-              document.getElementById('message-input').focus();
-
-          }, function(error) {
-              updateConnectionStatus('disconnected', 'Ошибка подключения');
-              console.error('Connection error:', error);
-          });
+          // 2. Подключаемся к WebSocket
+          connectWebSocket(username);
 
       } catch (error) {
-          console.error('Error creating chat:', error);
-          updateConnectionStatus('disconnected', 'Ошибка создания чата');
+          console.error('Connection failed:', error);
+          updateConnectionStatus('disconnected', 'Ошибка: ' + error.message);
       }
   }
 
+  async function createOrGetChat(username, password) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const advertId = urlParams.get('advertId');
+      const recipientId = urlParams.get('recipientId');
+
+      const response = await fetch('/api/chats', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Basic ' + btoa(username + ':' + password)
+          },
+          body: JSON.stringify({
+              advertId: parseInt(advertId),
+              recipientId: parseInt(recipientId)
+          })
+      });
+
+      if (!response.ok) {
+          throw new Error('Ошибка создания чата: ' + response.status);
+      }
+
+      return await response.json();
+  }
+
+  function connectWebSocket(username) {
+    console.log('Creating SockJS connection...');
+    const socket = new SockJS('http://localhost:8080/ws');
+    stompClient = Stomp.over(socket);
+
+    // Включаем debug logging
+    stompClient.debug = function(str) {
+        console.log('STOMP debug:', str);
+    };
+
+    console.log('Attempting STOMP connection...');
+    stompClient.connect(
+        { 'username': username },
+        function(frame) {
+            console.log('✅ STOMP Connected successfully:', frame);
+            updateConnectionStatus('connected', 'Подключено!');
+
+            // Подписываемся на топик чата
+            console.log('Subscribing to topic:', '/topic/chat.' + currentChatId);
+            const subscription = stompClient.subscribe('/topic/chat.' + currentChatId, function(message) {
+                console.log('✅ Message received from server:', message.body);
+                try {
+                    const messageData = JSON.parse(message.body);
+                    displayMessage(messageData);
+                } catch (e) {
+                    console.error('❌ Parse error:', e, message.body);
+                }
+            });
+
+            console.log('Subscription result:', subscription);
+
+            // Загружаем историю сообщений
+            loadMessageHistory();
+
+            // Активируем поле ввода
+            document.getElementById('message-input').disabled = false;
+            document.getElementById('send-button').disabled = false;
+            document.getElementById('message-input').focus();
+        },
+        function(error) {
+            console.error('❌ STOMP Connection error:', error);
+            updateConnectionStatus('disconnected', 'Ошибка подключения');
+        }
+    );
+  }
+
   function disconnect() {
-      if (stompClient !== null) {
+      if (stompClient) {
           stompClient.disconnect();
       }
       updateConnectionStatus('disconnected', 'Отключено');
@@ -136,18 +204,25 @@
   }
 
   function sendMessage() {
-      const messageInput = document.getElementById('message-input');
-      const messageText = messageInput.value.trim();
+    const messageInput = document.getElementById('message-input');
+    const messageText = messageInput.value.trim();
 
-      if (messageText && stompClient && stompClient.connected) {
-          const message = {
-              text: messageText,
-              timestamp: new Date().toISOString()
-          };
+    if (messageText && stompClient) {
+        console.log('Sending message:', messageText);
 
-          stompClient.send('/app/chat/' + currentChatId + '/send', {}, JSON.stringify(message));
-          messageInput.value = '';
-      }
+        const message = {
+            text: messageText,
+            timestamp: new Date().toISOString()
+        };
+
+        const destination = '/app/chat/' + currentChatId + '/send';
+        console.log('Sending to destination:', destination);
+
+        stompClient.send(destination, {}, JSON.stringify(message));
+        messageInput.value = '';
+    } else {
+        console.log('Cannot send message - check connection');
+    }
   }
 
   async function loadMessageHistory() {
@@ -161,21 +236,23 @@
               }
           });
 
-          const messages = await response.json();
-          messages.forEach(displayMessage);
-
+          if (response.ok) {
+              const messages = await response.json();
+              messages.forEach(displayMessage);
+          }
       } catch (error) {
-          console.error('Error loading message history:', error);
+          console.error('Error loading history:', error);
       }
   }
 
   function displayMessage(message) {
       const chatContainer = document.getElementById('chat-container');
+      if (!chatContainer) return;
+
       const messageDiv = document.createElement('div');
-
       const isMyMessage = message.sender.username === document.getElementById('username').value;
-      messageDiv.className = isMyMessage ? 'message my-message' : 'message other-message';
 
+      messageDiv.className = isMyMessage ? 'message my-message' : 'message other-message';
       messageDiv.innerHTML = `
           <div class="message-sender">${message.sender.username}</div>
           <div>${message.text}</div>
@@ -188,17 +265,17 @@
       chatContainer.scrollTop = chatContainer.scrollHeight;
   }
 
-  function updateConnectionStatus(status, message) {
-      const statusDiv = document.getElementById('connection-status');
-      statusDiv.textContent = message;
-      statusDiv.className = `connection-status ${status}`;
-  }
+  // Инициализация при загрузке страницы
+  document.addEventListener('DOMContentLoaded', function() {
+      ensureElements();
+      updateChatInfo();
 
-  // Отправка по Enter
-  document.getElementById('message-input').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-          sendMessage();
-      }
+      // Обработчик Enter для отправки сообщения
+      document.getElementById('message-input').addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+              sendMessage();
+          }
+      });
   });
 </script>
 </body>

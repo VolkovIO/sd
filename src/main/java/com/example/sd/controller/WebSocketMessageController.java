@@ -23,6 +23,12 @@ public class WebSocketMessageController {
     private final MessageService messageService;
     private final UserRepository userRepository;
 
+    @MessageMapping("/ping")
+    public void handlePing() {
+        // Просто отвечаем на ping, ничего не делаем
+        log.debug("Ping received");
+    }
+
     @MessageMapping("/chat/{chatId}/send")
     @SendTo("/topic/chat.{chatId}")
     public MessageDTO sendMessage(@DestinationVariable Long chatId,

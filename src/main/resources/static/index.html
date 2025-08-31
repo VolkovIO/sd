@@ -68,6 +68,29 @@
         }
     }
 
+    // Заменяем простые ссылки на обработку аутентификации
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('a[href^="/chat.html"]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+
+                if (!username || !password) {
+                    alert('Введите username и password для перехода в чат');
+                    return;
+                }
+
+                // Сохраняем credentials в sessionStorage
+                sessionStorage.setItem('chat_username', username);
+                sessionStorage.setItem('chat_password', password);
+
+                window.location.href = this.href;
+            });
+        });
+    });
+
     // Загружаем объявления при загрузке страницы
     window.onload = loadAdverts;
 </script>
