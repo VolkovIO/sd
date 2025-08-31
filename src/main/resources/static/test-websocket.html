@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <script src="/js/lib/sockjs.min.js"></script>
+    <script src="/js/lib/stomp.min.js"></script>
+</head>
+<body>
+<h1>WebSocket Test</h1>
+<button onclick="connect()">Connect</button>
+<button onclick="disconnect()">Disconnect</button>
+<div id="messages"></div>
+
+<script>
+    let stompClient = null;
+
+    function connect() {
+        const socket = new SockJS('http://localhost:8080/ws');
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function(frame) {
+            console.log('Connected: ' + frame);
+
+            // Подписываемся на тестовый топик
+            stompClient.subscribe('/topic/chat.1', function(message) {
+                showMessage(JSON.parse(message.body));
+            });
+        });
+    }
+
+    function disconnect() {
+        if (stompClient !== null) {
+            stompClient.disconnect();
+        }
+        console.log("Disconnected");
+    }
+
+    function showMessage(message) {
+        const messages = document.getElementById('messages');
+        messages.innerHTML += '<p>' + message.text + '</p>';
+    }
+
+    // Автоподключение при загрузке
+    window.onload = connect;
+</script>
+</body>
+</html>

@@ -30,4 +30,12 @@ public class Message {
 
     @Column(nullable = false)
     private Instant timestamp;
+
+    // Конструктор для WebSocket (без ID и других auto-generated полей)
+    public Message(Chat chat, User sender, String text, Instant timestamp) {
+        this.chat = chat;
+        this.sender = sender;
+        this.text = text;
+        this.timestamp = timestamp;
+    }
 }

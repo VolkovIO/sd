@@ -29,6 +29,9 @@ public class SecurityConfig {
                         // Защищенные эндпоинты объявлений
                         .requestMatchers(HttpMethod.POST, "/api/adverts").authenticated()
 
+                        // Разрешаем WebSocket endpoint
+                        .requestMatchers("/ws/**").permitAll() // или authenticated()
+
                         .anyRequest().permitAll()
                 )
                 .httpBasic(httpBasic -> {})
