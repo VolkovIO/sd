@@ -5,6 +5,7 @@ import com.example.sd.entity.Message;
 import com.example.sd.entity.User;
 import com.example.sd.repository.UserRepository;
 import com.example.sd.service.MessageService;
+import com.example.sd.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,6 +26,7 @@ public class MessageController {
 
     private final MessageService messageService;
     private final UserRepository userRepository;
+    private final WebSocketService webSocketService;
 
     @GetMapping
     public List<Message> getChatMessages(@PathVariable Long chatId,
@@ -52,7 +54,12 @@ public class MessageController {
                                @AuthenticationPrincipal UserDetails userDetails) {
 
         User currentUser = getUserFromDetails(userDetails);
-        return messageService.sendMessage(chatId, currentUser, request.getText());
+        Message message = messageService.sendMessage(chatId, currentUser, request.getText());
+
+        // Отправляем через WebSocket
+        webSocketService.sendMessageToChat(message);
+
+        return message;
     }
 
     private User getUserFromDetails(UserDetails userDetails) {

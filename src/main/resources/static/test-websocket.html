@@ -1,30 +1,71 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WebSocket Test</title>
+    <title>WebSocket Chat Test</title>
     <script src="/js/lib/sockjs.min.js"></script>
     <script src="/js/lib/stomp.min.js"></script>
+    <style>
+        .message { margin: 10px; padding: 10px; border: 1px solid #ccc; }
+        .my-message { background-color: #e3f2fd; text-align: right; }
+        .other-message { background-color: #f5f5f5; }
+    </style>
 </head>
 <body>
-<h1>WebSocket Test</h1>
-<button onclick="connect()">Connect</button>
-<button onclick="disconnect()">Disconnect</button>
+<h1>WebSocket Chat Test</h1>
+
+<div>
+    <label>Chat ID: <input type="number" id="chatId" value="1"></label>
+    <label>Username: <input type="text" id="username" value="testuser1"></label>
+    <label>Password: <input type="password" id="password" value="password123"></label>
+    <button onclick="connect()">Connect</button>
+    <button onclick="disconnect()">Disconnect</button>
+</div>
+
+<div>
+    <h3>Send Message:</h3>
+    <input type="text" id="messageInput" placeholder="Type your message">
+    <button onclick="sendMessage()">Send</button>
+</div>
+
+<div id="connectionStatus">Disconnected</div>
+
+<h3>Messages:</h3>
 <div id="messages"></div>
 
 <script>
     let stompClient = null;
+    let currentChatId = null;
 
     function connect() {
+        const chatId = document.getElementById('chatId').value;
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        currentChatId = chatId;
+
         const socket = new SockJS('http://localhost:8080/ws');
         stompClient = Stomp.over(socket);
 
-        stompClient.connect({}, function(frame) {
+        stompClient.connect({
+            'username': username,
+            'password': password
+        }, function(frame) {
+
+            document.getElementById('connectionStatus').textContent = 'Connected to chat ' + chatId;
             console.log('Connected: ' + frame);
 
-            // Подписываемся на тестовый топик
-            stompClient.subscribe('/topic/chat.1', function(message) {
+            // Подписываемся на топик чата
+            stompClient.subscribe('/topic/chat.' + chatId, function(message) {
                 showMessage(JSON.parse(message.body));
             });
+
+            // Подписываемся на персональную очередь
+            stompClient.subscribe('/user/queue/typing', function(message) {
+                console.log('Typing event: ', message.body);
+            });
+
+        }, function(error) {
+            console.error('Connection error: ', error);
+            document.getElementById('connectionStatus').textContent = 'Connection failed';
         });
     }
 
@@ -32,16 +73,84 @@
         if (stompClient !== null) {
             stompClient.disconnect();
         }
+        document.getElementById('connectionStatus').textContent = 'Disconnected';
         console.log("Disconnected");
     }
 
-    function showMessage(message) {
-        const messages = document.getElementById('messages');
-        messages.innerHTML += '<p>' + message.text + '</p>';
+    function sendMessage() {
+        if (!stompClient || !stompClient.connected) {
+            alert('Not connected!');
+            return;
+        }
+
+        const messageText = document.getElementById('messageInput').value;
+        if (!messageText.trim()) return;
+
+        const message = {
+            text: messageText,
+            timestamp: new Date().toISOString()
+        };
+
+        // Отправляем сообщение через WebSocket
+        stompClient.send('/app/chat/' + currentChatId + '/send', {}, JSON.stringify(message));
+
+        document.getElementById('messageInput').value = '';
     }
 
-    // Автоподключение при загрузке
-    window.onload = connect;
+    function showMessage(message) {
+        const messagesDiv = document.getElementById('messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message';
+        messageDiv.innerHTML = `
+            <strong>${message.sender?.username || 'Unknown'}:</strong>
+            ${message.text}
+            <br><small>${new Date(message.timestamp).toLocaleString()}</small>
+        `;
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // Автофокус на поле ввода
+    document.getElementById('messageInput').focus();
+
+    // Отправка по Enter
+    document.getElementById('messageInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+</script>
+
+<div>
+    <h3>Create Chat:</h3>
+    <label>Advert ID: <input type="number" id="advertId" value="1"></label>
+    <label>Recipient ID: <input type="number" id="recipientId" value="2"></label>
+    <button onclick="createChat()">Create Chat</button>
+</div>
+
+<script>
+    function createChat() {
+        const advertId = document.getElementById('advertId').value;
+        const recipientId = document.getElementById('recipientId').value;
+
+        fetch('/api/chats', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Basic ' + btoa(username + ':' + password)
+            },
+            body: JSON.stringify({
+                advertId: parseInt(advertId),
+                recipientId: parseInt(recipientId)
+            })
+        })
+        .then(response => response.json())
+        .then(chat => {
+            console.log('Chat created:', chat);
+            document.getElementById('chatId').value = chat.id;
+        })
+        .catch(error => console.error('Error creating chat:', error));
+    }
 </script>
 </body>
 </html>

@@ -3,6 +3,7 @@ package com.example.sd.controller;
 import com.example.sd.dto.CreateChatRequest;
 import com.example.sd.entity.Chat;
 import com.example.sd.entity.User;
+import com.example.sd.repository.ChatRepository;
 import com.example.sd.service.ChatService;
 import com.example.sd.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,12 @@ public class ChatController {
 
     private final ChatService chatService;
     private final UserRepository userRepository;
+    private final ChatRepository chatRepository;
+
+    @GetMapping("/api/chats/all")
+    public List<Chat> getAllChats() {
+        return chatRepository.findAll();
+    }
 
     @GetMapping("/my")
     public List<Chat> getUserChats(@AuthenticationPrincipal UserDetails userDetails) {
